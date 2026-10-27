@@ -26,12 +26,50 @@ def read_sales(path: Path = DATA_PATH) -> list[dict[str, str]]:
 
 def parse_number(value: str) -> float | None:
     """Convert a messy numeric string to a float, or return None if it cannot be trusted."""
-    raise NotImplementedError
+    if not value or not value.strip():
+        return None
+
+
+    value = value.replace(",", "").strip()
+
+
+    try:
+        return float(value)
+    except ValueError:
+        return None
 
 
 def convert_rows(rows: list[dict[str, str]]) -> tuple[list[dict], list[dict]]:
     """Return (clean_rows, skipped_rows). Clean rows have numeric quantity, unit price and revenue."""
-    raise NotImplementedError
+    clean_rows = []
+    skipped_rows = []
+
+    for row in rows:
+        quantity = parse_number(row["quantity"])
+        unit_price = parse_number(row["unit_price_kes"])
+
+        if quantity is None:
+            skipped_rows.append({
+                "sale_id": row["sale_id"],
+                "reason": "Invalid quantity"
+            })
+            continue
+
+        if unit_price is None:
+            skipped_rows.append({
+                "sale_id": row["sale_id"],
+                "reason": "Invalid unit price"
+            })
+            continue
+
+        row["quantity"] = quantity
+        row["unit_price_kes"] = unit_price
+        row["revenue"] = quantity * unit_price
+
+        clean_rows.append(row)
+
+    
+    return clean_rows, skipped_rows    
 
 
 def total_revenue(rows: list[dict]) -> float:
@@ -73,6 +111,18 @@ def verify_with_pandas(path: Path, my_results: dict) -> None:
 
 if __name__ == "__main__":
     # TODO
+    # Task 1 : Read CSV file and inspect the first raw redord
     sales = read_sales()
-    print(sales[0])
+    #print(sales[0])
+
+
+    #Task 2 : Convert numeric values, calculate revenues and record skipped rows
+    clean_sales, skipped_sales = convert_rows(sales)
     
+
+    print(f"Rows used: {len(clean_sales)}")
+    print(f"Rows skipped: {len(skipped_sales)}")
+    print(f"Skipped rows: {skipped_sales}")
+    print(f"First cleaned row: {clean_sales[0]}")
+
+
