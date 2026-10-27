@@ -82,7 +82,18 @@ def total_revenue(rows: list[dict]) -> float:
 
 def revenue_by(rows: list[dict], field: str) -> dict[str, float]:
     """Total revenue grouped by any column (product, store, payment_method...)."""
-    raise NotImplementedError
+    totals = {}
+
+    for row in rows:
+        category = row[field]
+        revenue = row["revenue"]
+
+        if category not in totals:
+            totals[category] = 0
+
+        totals[category] += revenue
+
+    return totals        
 
 
 def top_n(totals: dict[str, float], n: int = 3) -> list[tuple[str, float]]:
@@ -133,6 +144,17 @@ if __name__ == "__main__":
     # Task 3 : Calculate and show total revenue
     revenue = total_revenue(clean_sales)
     print(f"Total revenue: KES {revenue:,.2f}")
-    
+
+
+    # Task 4 : Calculate revenue by product, store and payment method
+    product_revenue = revenue_by(clean_sales, "product")
+    store_revenue = revenue_by(clean_sales, "store")
+    payment_revenue = revenue_by(clean_sales, "payment_method")
+
+    print(f"Revenue by product: {product_revenue}")
+    print(f"Revenue by store: {store_revenue}")
+    print(f"Revenue by payment method: {payment_revenue}")
+
+
 
 
