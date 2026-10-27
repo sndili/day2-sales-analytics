@@ -29,9 +29,7 @@ def parse_number(value: str) -> float | None:
     if not value or not value.strip():
         return None
 
-
     value = value.replace(",", "").strip()
-
 
     try:
         return float(value)
@@ -73,7 +71,13 @@ def convert_rows(rows: list[dict[str, str]]) -> tuple[list[dict], list[dict]]:
 
 
 def total_revenue(rows: list[dict]) -> float:
-    raise NotImplementedError
+    #Calculate the total revenue from all valid sales
+    total = 0
+
+    for row in rows:
+        total += row["quantity"] * row["unit_price_kes"]
+
+    return total    
 
 
 def revenue_by(rows: list[dict], field: str) -> dict[str, float]:
@@ -116,13 +120,19 @@ if __name__ == "__main__":
     #print(sales[0])
 
 
-    #Task 2 : Convert numeric values, calculate revenues and record skipped rows
+    # Task 2 : Convert numeric values, calculate revenues and record skipped rows
     clean_sales, skipped_sales = convert_rows(sales)
-    
+
 
     print(f"Rows used: {len(clean_sales)}")
     print(f"Rows skipped: {len(skipped_sales)}")
     print(f"Skipped rows: {skipped_sales}")
     print(f"First cleaned row: {clean_sales[0]}")
+
+
+    # Task 3 : Calculate and show total revenue
+    revenue = total_revenue(clean_sales)
+    print(f"Total revenue: KES {revenue:,.2f}")
+    
 
 
