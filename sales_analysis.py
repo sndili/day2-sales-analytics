@@ -113,15 +113,41 @@ def high_value(rows: list[dict], threshold: float) -> list[dict]:
 
 # Reusable statistics - implement these yourself, no statistics module.
 def mean(values: list[float]) -> float:
-    raise NotImplementedError
+    if not values:
+        raise ValueError("Cannot calculate mean of an empty list")
+
+    return sum(values) / len(values)
 
 
 def median(values: list[float]) -> float:
-    raise NotImplementedError
+    if not values:
+        raise ValueError("Cannot calculate median of an empty list")
+
+    sorted_values = sorted(values)
+    middle = len(sorted_values) // 2
+
+    if len(sorted_values) % 2 == 1:
+        return sorted_values[middle]
+
+    return(sorted_values[middle - 1] + sorted_values[middle]) / 2
 
 
 def minimum_maximum(values: list[float]) -> tuple[float, float]:
-    raise NotImplementedError
+    if not values:
+        raise ValueError("Cannot find minimum and maximum empty list")
+
+    minimum = values[0]
+    maximum = values[0]
+
+    for value in values:
+        if value < minimum:
+            minimum = value
+
+        if value > maximum:
+            maximum = value
+
+
+    return minimum, maximum            
 
 
 def verify_with_pandas(path: Path, my_results: dict) -> None:
@@ -178,6 +204,20 @@ if __name__ == "__main__":
     print(f"High-value transactions: {high_value_sales}")
     print(f"High-value transaction count: {len(high_value_sales)}")
     print(f"High-value sales by store: {high_value_counts}")
+
+
+    # Task 7 : Calculate statistics for individual sale revenue
+    sales_revenue = [row["revenue"] for row in clean_sales]
+
+    average_revenue = mean(sales_revenue)
+    median_revenue = median(sales_revenue)
+    minimum_revenue, maximum_revenue = minimum_maximum(sales_revenue)
+
+
+    print(f"Mean revenue: KES {average_revenue:,.2f}")
+    print(f"Median revenue: KES {median_revenue:,.2f}")
+    print(f"Minimum revenue: KES {minimum_revenue:,.2f}")
+    print(f"Maximum revenue: KES {maximum_revenue:,.2f}")
 
 
 
