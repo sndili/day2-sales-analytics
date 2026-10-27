@@ -98,7 +98,12 @@ def revenue_by(rows: list[dict], field: str) -> dict[str, float]:
 
 def top_n(totals: dict[str, float], n: int = 3) -> list[tuple[str, float]]:
     """Return the n highest (key, value) pairs, highest first."""
-    raise NotImplementedError
+    ranked_totals = sorted(
+        totals.items(),
+        key=lambda item: (-item[1], item[0])
+    )
+
+    return ranked_totals[:n]
 
 
 def high_value(rows: list[dict], threshold: float) -> list[dict]:
@@ -126,6 +131,7 @@ def verify_with_pandas(path: Path, my_results: dict) -> None:
 
 if __name__ == "__main__":
     # TODO
+
     # Task 1 : Read CSV file and inspect the first raw redord
     sales = read_sales()
     #print(sales[0])
@@ -154,6 +160,11 @@ if __name__ == "__main__":
     print(f"Revenue by product: {product_revenue}")
     print(f"Revenue by store: {store_revenue}")
     print(f"Revenue by payment method: {payment_revenue}")
+
+
+    # Task 5 : Display the three products with the highest revenue
+    top_products = top_n(product_revenue, 3)
+    print(f"Top 3 products: {top_products}")
 
 
 
