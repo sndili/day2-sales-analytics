@@ -152,7 +152,81 @@ def minimum_maximum(values: list[float]) -> tuple[float, float]:
 
 def verify_with_pandas(path: Path, my_results: dict) -> None:
     """Recompute the headline numbers with pandas and print whether each one matches."""
-    raise NotImplementedError
+    import pandas as pd
+
+    sales_data = pd.read_csv(path)
+
+    sales_data["quantity"] = pd.to_numeric(
+        sales_data["quantity"].astype(str).str.replace(",", "", regex=False),
+        errors="coerce"
+    )
+
+    sales_data["unit_price_kes"] = pd.to_numeric(
+        sales_data["unit_price_kes"].astype(str).str.replace(",", "", regex=False),
+        errors="coerce"
+    )
+
+    sales_data = sales_data.dropna(subset=["quantity", "unit_price_kes"])
+    sales_data["revenue"] = (
+        sales_data["quantity"] * sales_data["unit_price_kes"]
+    )
+
+    pandas_total = sales_data["revenue"].sum()
+    pandas_products = sales_data.groupby("product")["revenue"].sum().to_dict()
+    pandas_top_products = top_n(pandas_products, 3)
+    pandas_mean = sales_data["revenue"].mean()
+    pandas_median = sales_data["revenue"].median()
+
+
+    checks = {
+        "Total revenue": (
+            my_results["total_revenue"],
+            pandas_total
+        ),
+        "Revenue by product": (
+            my_results["product_revenue"],
+            pandas_products
+        ),
+        "Top 3 products": (
+            my_results["top_products"],
+            pandas_top_products
+        ),
+        "Mean revenue": (
+            my_results["mean_revenue"],
+            pandas_mean
+        ),
+        "Median revenue": (
+            my_results["median_revenue"],
+            pandas_median
+        ),
+    }
+
+    for name, (my_value, pandas_value) in checks.items():
+        if isinstance(my_value, dict):
+            matches = all(
+                abs(my_value[key] - pandas_value.get(key, 0)) < 0.01
+                for key in my_value
+            ) and my_value.keys() == pandas_value.keys()
+
+        elif isinstance(my_value, list):
+            matches = (
+                len(my_value) == len(pandas_value)
+                and all(
+                    first[0] == second[0]
+                    and abs(first[1] - second[1]) < 0.01
+                    for first, second in zip(my_value, pandas_value)
+                )
+            )
+
+        else:
+            matches = abs(my_value - pandas_value) < 0.01
+
+        status = "MATCH" if matches else "MISMATCH"
+        print(f"{name}: {status}")
+
+        if not matches:
+            print(f"  Your result: {my_value}")
+            print(f"  Pandas result: {pandas_value}")            
 
 
 if __name__ == "__main__":
@@ -218,6 +292,19 @@ if __name__ == "__main__":
     print(f"Median revenue: KES {median_revenue:,.2f}")
     print(f"Minimum revenue: KES {minimum_revenue:,.2f}")
     print(f"Maximum revenue: KES {maximum_revenue:,.2f}")
+
+
+    # Task 8 : Verify headline results independently with pandas
+
+    my_results = {
+        "total_revenue": revenue,
+        "product_revenue": product_revenue,
+        "top_products": top_products,
+        "mean_revenue": average_revenue,
+        "median_revenue": median_revenue,
+    }
+
+    verify_with_pandas(DATA_PATH, my_results)
 
 
 
