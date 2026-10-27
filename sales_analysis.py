@@ -7,6 +7,9 @@ Tasks 1-7 use only the standard library. pandas is allowed in task 8, to check y
 import csv
 from pathlib import Path
 
+from contextlib import redirect_stdout
+from io import StringIO   
+
 DATA_PATH = Path("data") / "electronics_sales.csv"
 
 
@@ -134,7 +137,7 @@ def median(values: list[float]) -> float:
 
 def minimum_maximum(values: list[float]) -> tuple[float, float]:
     if not values:
-        raise ValueError("Cannot find minimum and maximum empty list")
+        raise ValueError("Cannot find minimum and maximum of an empty list")
 
     minimum = values[0]
     maximum = values[0]
@@ -176,8 +179,8 @@ def verify_with_pandas(path: Path, my_results: dict) -> None:
     pandas_top_products = top_n(pandas_products, 3)
     pandas_mean = sales_data["revenue"].mean()
     pandas_median = sales_data["revenue"].median()
-
-
+    
+    
     checks = {
         "Total revenue": (
             my_results["total_revenue"],
@@ -187,26 +190,33 @@ def verify_with_pandas(path: Path, my_results: dict) -> None:
             my_results["product_revenue"],
             pandas_products
         ),
-        "Top 3 products": (
+        "Top 3": (
             my_results["top_products"],
             pandas_top_products
         ),
-        "Mean revenue": (
-            my_results["mean_revenue"],
-            pandas_mean
-        ),
-        "Median revenue": (
-            my_results["median_revenue"],
-            pandas_median
+        "Mean / median": (
+            (
+                my_results["mean_revenue"],
+                my_results["median_revenue"]
+            ),
+            (
+                pandas_mean,
+                pandas_median
+            )
         ),
     }
 
+    print("=== pandas verification ===")
+
     for name, (my_value, pandas_value) in checks.items():
         if isinstance(my_value, dict):
-            matches = all(
-                abs(my_value[key] - pandas_value.get(key, 0)) < 0.01
-                for key in my_value
-            ) and my_value.keys() == pandas_value.keys()
+            matches = (
+                my_value.keys() == pandas_value.keys()
+                and all(
+                    abs(my_value[key] - pandas_value[key]) < 0.01
+                    for key in my_value
+                )
+            )
 
         elif isinstance(my_value, list):
             matches = (
@@ -218,94 +228,182 @@ def verify_with_pandas(path: Path, my_results: dict) -> None:
                 )
             )
 
+        elif isinstance(my_value, tuple):
+            matches = all(
+                abs(first - second) < 0.01
+                for first, second in zip(my_value, pandas_value)
+            )
+
         else:
             matches = abs(my_value - pandas_value) < 0.01
 
         status = "MATCH" if matches else "MISMATCH"
-        print(f"{name}: {status}")
+        print(f"{name:<19}: {status}")
 
         if not matches:
-            print(f"  Your result: {my_value}")
-            print(f"  Pandas result: {pandas_value}")            
+            print(f"  pure={my_value}, pandas={pandas_value}")           
 
 
 if __name__ == "__main__":
     # TODO
-
-    # Task 1 : Read CSV file and inspect the first raw redord
     sales = read_sales()
-    #print(sales[0])
+    report = StringIO()
+
+    with redirect_stdout(report):
+
+        # Task 1 : Read CSV file and inspect the first raw redord
+        # sales = read_sales()
+        #print(sales[0])
 
 
-    # Task 2 : Convert numeric values, calculate revenues and record skipped rows
-    clean_sales, skipped_sales = convert_rows(sales)
+        # Task 2 : Convert numeric values, calculate revenues and record skipped rows
+        clean_sales, skipped_sales = convert_rows(sales)
 
 
-    print(f"Rows used: {len(clean_sales)}")
-    print(f"Rows skipped: {len(skipped_sales)}")
-    print(f"Skipped rows: {skipped_sales}")
-    print(f"First cleaned row: {clean_sales[0]}")
+        print("=== Sales report: September 2026 ===")
+        print(f"Rows read          : {len(sales)}")
+        print(f"Rows used          : {len(clean_sales)}")
+        skipped_details = ", ".join(
+            f"{row['sale_id']}: {row['reason']}"
+            for row in skipped_sales
+        )
+        print(f"Rows skipped       : {len(skipped_sales)}   ({skipped_details})")
+        print()
 
 
-    # Task 3 : Calculate and show total revenue
-    revenue = total_revenue(clean_sales)
-    print(f"Total revenue: KES {revenue:,.2f}")
+        # print(f"Rows used: {len(clean_sales)}")
+        # print(f"Rows skipped: {len(skipped_sales)}")
+        # print(f"Skipped rows: {skipped_sales}")
+        #print(f"First cleaned row: {clean_sales[0]}")
 
 
-    # Task 4 : Calculate revenue by product, store and payment method
-    product_revenue = revenue_by(clean_sales, "product")
-    store_revenue = revenue_by(clean_sales, "store")
-    payment_revenue = revenue_by(clean_sales, "payment_method")
-
-    print(f"Revenue by product: {product_revenue}")
-    print(f"Revenue by store: {store_revenue}")
-    print(f"Revenue by payment method: {payment_revenue}")
+        # Task 3 : Calculate and show total revenue
+        revenue = total_revenue(clean_sales)
+        print(f"Total revenue (KES): {revenue:,.2f}")
 
 
-    # Task 5 : Display the three products with the highest revenue
-    top_products = top_n(product_revenue, 3)
-    print(f"Top 3 products: {top_products}")
+        # Task 4 : Calculate revenue by product, store and payment method
+        product_revenue = revenue_by(clean_sales, "product")
+        store_revenue = revenue_by(clean_sales, "store")
+        payment_revenue = revenue_by(clean_sales, "payment_method")
+
+        print("Revenue by product (KES)")
+        for product, amount in sorted(
+            product_revenue.items(),
+            key=lambda item: (-item[1], item[0])
+        ):
+            print(f"  {product:<25} {amount:,.2f}")
+        print()
+
+        print("Revenue by store (KES)")
+        for store, amount in sorted(
+            store_revenue.items(),
+            key=lambda item: (-item[1], item[0])
+        ):
+            print(f"  {store:<25} {amount:,.2f}")
+        print()
+
+        print("Revenue by payment method (KES)")
+        for method, amount in sorted(
+            payment_revenue.items(),
+            key=lambda item: (-item[1], item[0])
+        ):
+            print(f"  {method:<25} {amount:,.2f}")
+        print()
+
+        # print(f"Revenue by product: {product_revenue}")
+        # print(f"Revenue by store: {store_revenue}")
+        # print(f"Revenue by payment method: {payment_revenue}")
 
 
-    # Task 6 : Find hgh values sales and count them by store
-    high_value_sales = high_value(clean_sales, 50000)
+        # Task 5 : Display the three products with the highest revenue
+        top_products = top_n(product_revenue, 3)
+        # print(f"Top 3 products: {top_products}")
 
-    high_value_counts = {
-        store: sum(1 for row in high_value_sales if row["store"] == store)
-        for store in store_revenue
-    }
-
-    print(f"High-value transactions: {high_value_sales}")
-    print(f"High-value transaction count: {len(high_value_sales)}")
-    print(f"High-value sales by store: {high_value_counts}")
+        print("Top 3 products")
+        for rank, (product, amount) in enumerate(top_products, start=1):
+            print(f"  {rank}. {product} - KES {amount:,.2f}")
+        print()
 
 
-    # Task 7 : Calculate statistics for individual sale revenue
-    sales_revenue = [row["revenue"] for row in clean_sales]
+        # Task 6 : Find hgh values sales and count them by store
+        
+        threshold = 50000
+        high_value_sales = high_value(clean_sales, threshold)
 
-    average_revenue = mean(sales_revenue)
-    median_revenue = median(sales_revenue)
-    minimum_revenue, maximum_revenue = minimum_maximum(sales_revenue)
+        high_value_counts = {
+            store: sum(
+                1 for row in high_value_sales if row["store"] == store
+            )
+            for store in store_revenue
+        }
+
+        print(f"High-value transactions (>= KES {threshold:,.0f}): {len(high_value_sales)}")
+        for row in high_value_sales:
+            print(
+                f"  {row['sale_id']}  {row['sale_date']}  "
+                f"{row['store']}  {row['product']}  "
+                f"KES {row['revenue']:,.2f}"
+            )
+        print("High-value sales by store:")
+        for store, count in high_value_counts.items():
+            print(f"  {store}: {count}")
+        print()
+
+        # high_value_sales = high_value(clean_sales, 50000)
+        
+                # high_value_counts = {
+                #     store: sum(1 for row in high_value_sales if row["store"] == store)
+                #     for store in store_revenue
+                # }
+        
+                # print(f"High-value transactions: {high_value_sales}")
+                # print(f"High-value transaction count: {len(high_value_sales)}")
+                # print(f"High-value sales by store: {high_value_counts}")
 
 
-    print(f"Mean revenue: KES {average_revenue:,.2f}")
-    print(f"Median revenue: KES {median_revenue:,.2f}")
-    print(f"Minimum revenue: KES {minimum_revenue:,.2f}")
-    print(f"Maximum revenue: KES {maximum_revenue:,.2f}")
+
+        # Task 7 : Calculate statistics for individual sale revenue
+        sales_revenue = [row["revenue"] for row in clean_sales]
+
+        average_revenue = mean(sales_revenue)
+        median_revenue = median(sales_revenue)
+        minimum_revenue, maximum_revenue = minimum_maximum(sales_revenue)
+
+        print("Transaction revenue statistics")
+        print(f"  mean   : KES {average_revenue:,.2f}")
+        print(f"  median : KES {median_revenue:,.2f}")
+        print(f"  min    : KES {minimum_revenue:,.2f}")
+        print(f"  max    : KES {maximum_revenue:,.2f}")
+        print()
 
 
-    # Task 8 : Verify headline results independently with pandas
+        # print(f"Mean revenue: KES {average_revenue:,.2f}")
+        # print(f"Median revenue: KES {median_revenue:,.2f}")
+        # print(f"Minimum revenue: KES {minimum_revenue:,.2f}")
+        # print(f"Maximum revenue: KES {maximum_revenue:,.2f}")
 
-    my_results = {
-        "total_revenue": revenue,
-        "product_revenue": product_revenue,
-        "top_products": top_products,
-        "mean_revenue": average_revenue,
-        "median_revenue": median_revenue,
-    }
 
-    verify_with_pandas(DATA_PATH, my_results)
+        # Task 8 : Verify headline results independently with pandas
 
+        my_results = {
+            "total_revenue": revenue,
+            "product_revenue": product_revenue,
+            "top_products": top_products,
+            "mean_revenue": average_revenue,
+            "median_revenue": median_revenue,
+        }
+        
+        verify_with_pandas(DATA_PATH, my_results)
+
+    # Save the formatted report and display it in the terminal.
+    report_text = report.getvalue()
+    print(report_text)
+
+    output_path = Path("output") / "sales_report.txt"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(report_text, encoding="utf-8")
+    print(f"Report saved to {output_path}")   
 
 
 
