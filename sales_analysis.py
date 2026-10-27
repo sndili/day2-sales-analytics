@@ -108,7 +108,7 @@ def top_n(totals: dict[str, float], n: int = 3) -> list[tuple[str, float]]:
 
 def high_value(rows: list[dict], threshold: float) -> list[dict]:
     """Transactions whose revenue is at or above threshold (use a comprehension)."""
-    raise NotImplementedError
+    return [row for row in rows if row["revenue"] >= threshold]
 
 
 # Reusable statistics - implement these yourself, no statistics module.
@@ -165,6 +165,19 @@ if __name__ == "__main__":
     # Task 5 : Display the three products with the highest revenue
     top_products = top_n(product_revenue, 3)
     print(f"Top 3 products: {top_products}")
+
+
+    # Task 6 : Find hgh values sales and count them by store
+    high_value_sales = high_value(clean_sales, 50000)
+
+    high_value_counts = {
+        store: sum(1 for row in high_value_sales if row["store"] == store)
+        for store in store_revenue
+    }
+
+    print(f"High-value transactions: {high_value_sales}")
+    print(f"High-value transaction count: {len(high_value_sales)}")
+    print(f"High-value sales by store: {high_value_counts}")
 
 
 
